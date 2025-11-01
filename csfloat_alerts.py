@@ -5,6 +5,10 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 
+# -*- coding: utf-8 -*-
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
 # Charge d'abord .env, puis .env.secrets (qui écrase les valeurs si besoin)
 load_dotenv('.env')
 load_dotenv('.env.secrets', override=True)
