@@ -125,6 +125,7 @@ def check_item(item):
 def main():
     print("🚀 Lancement du bot...\n")
     while True:
+        print("⏰ Vérification :", datetime.now().strftime("%H:%M"))
         for item in ITEMS:
             check_item(item)
         time.sleep(CHECK_INTERVAL)

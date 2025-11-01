@@ -1,2 +1,4 @@
 .env.secrets
 history.json
+/dist
+csfloat_alerts.spec
