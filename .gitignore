@@ -1,4 +1,9 @@
 .env.secrets
 history.json
+/build
 /dist
-csfloat_alerts.spec
+*.spec
+
+# IntelliJ IDEA
+*.iml
+/.idea

@@ -20,7 +20,7 @@ def build_exe(script_name):
     subprocess.check_call(cmd)
 
 if __name__ == "__main__":
-    script = "csfloat_alerts.py"
+    script = "src/bot.py"
     if not os.path.exists(script):
         print(f"Le fichier {script} est introuvable.")
         sys.exit(1)

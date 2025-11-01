@@ -2,6 +2,7 @@ import requests
 import time
 import json
 import os
+import subprocess
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -10,14 +11,14 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Charge d'abord .env, puis .env.secrets (qui écrase les valeurs si besoin)
-load_dotenv('.env')
-load_dotenv('.env.secrets', override=True)
+load_dotenv('../.env')
+load_dotenv('../.env.secrets', override=True)
 
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 60))
 CSFLOAT_TOKEN = os.getenv("CSFLOAT_TOKEN")
-HISTORY_FILE = "history.json"
+HISTORY_FILE = "../history.json"
 
 # Liste des items à surveiller
 ITEMS = [
@@ -40,6 +41,16 @@ ITEMS = [
 ]
 
 # https://csfloat.com/api/v1/listings?sort_by=lowest_price&min_float=0.06&max_float=0.15&def_index=508&paint_index=12
+
+def ensure_dependencies():
+    try:
+        import requests
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    try:
+        import dotenv
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
 
 # === Gestion de l'historique ===
 def load_history():
@@ -123,6 +134,7 @@ def check_item(item):
         print(f"❌ Erreur lors du check def_index={item['def_index']}: {e}")
 
 def main():
+    ensure_dependencies()
     print("🚀 Lancement du bot...\n")
     while True:
         print("⏰ Vérification :", datetime.now().strftime("%H:%M"))
