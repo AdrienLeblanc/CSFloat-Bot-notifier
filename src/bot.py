@@ -10,16 +10,23 @@ from dotenv import load_dotenv
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
+if getattr(sys, 'frozen', False):
+    # Exécution depuis un .exe PyInstaller
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    # Exécution normale (script Python)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Charge d'abord .env, puis .env.secrets (qui écrase les valeurs si besoin)
-load_dotenv('../.env')
-load_dotenv('../.env.secrets', override=True)
+load_dotenv(os.path.join(BASE_DIR, '../.env'))
+load_dotenv(os.path.join(BASE_DIR, '../.env.secrets'), override=True)
 
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 60))
 CSFLOAT_TOKEN = os.getenv("CSFLOAT_TOKEN")
-HISTORY_FILE = "../history.json"
-USD_TO_EUR = 0.86
+HISTORY_FILE = os.path.join(BASE_DIR, "../history.json")
+USD_TO_EUR = 0.8668
 
 # Liste des items à surveiller
 ITEMS = [
@@ -40,8 +47,6 @@ ITEMS = [
         "max_float": 0.15   # Minimal Wear
     },
 ]
-
-# https://csfloat.com/api/v1/listings?sort_by=lowest_price&min_float=0.06&max_float=0.15&def_index=508&paint_index=12
 
 def ensure_dependencies():
     try:
@@ -95,10 +100,12 @@ def check_item(item):
             history[item_key] = {}
 
         new_items_found = 0
+        if (data.get("code") == 1):
+            raise Exception(data.get("message"))
 
         for listing in data.get("data", []):
             listing_id = str(listing["id"])
-            price_usd = listing["price"] / 100  # USD
+            price_usd = listing["price"] / 100
             price_eur = price_usd * USD_TO_EUR
 
             previous_price = history[item_key].get(listing_id)
@@ -110,7 +117,8 @@ def check_item(item):
                 if price_usd <= item["max_price"] and flt <= item["max_float"]:
                     msg = (
                         f"🎯 **{item['name']}** \n"
-                        f"💰 Prix: ${price_usd:.2f} / {price_eur:.2f}€ | Float: {flt}\n"
+                        f"💰 Prix: $**{price_usd:.2f}** / **{price_eur:.2f}**€\n"
+                        f"💎 Float: {flt}\n"
                         f"🔗 {link}"
                     )
                     send_discord_message(msg)
@@ -120,8 +128,9 @@ def check_item(item):
                 previous_price_eur = previous_price * USD_TO_EUR
                 msg = (
                     f"🔄 **Changement de prix détecté !**\n"
-                    f"**Item name:** {item['name']}\n"
-                    f"💰 Ancien prix: ${previous_price:.2f} / {previous_price_eur:.2f}€ → Nouveau prix: ${price_usd:.2f} / {price_eur:.2f}€ | Float: {flt}\n"
+                    f"🎯 **{item['name']}** \n"
+                    f"💰 Ancien prix: $**{previous_price:.2f}** / **{previous_price_eur:.2f}**€ → Nouveau prix: $**{price_usd:.2f}** / **{price_eur:.2f}**€\n"
+                    f"💎 Float: {flt}\n"
                     f"🔗 {link}"
                 )
                 send_discord_message(msg)
@@ -134,10 +143,11 @@ def check_item(item):
             save_history(history)
 
     except Exception as e:
-        print(f"❌ Erreur lors du check def_index={item['def_index']}: {e}")
+        print(f"❌ Erreur : {e}")
 
 def main():
     ensure_dependencies()
+    print(os.path.join(BASE_DIR, '../.env.secrets'))
     print("🚀 Lancement du bot...\n")
     while True:
         print("⏰ Vérification :", datetime.now().strftime("%H:%M"))
