@@ -19,6 +19,7 @@ DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 60))
 CSFLOAT_TOKEN = os.getenv("CSFLOAT_TOKEN")
 HISTORY_FILE = "../history.json"
+USD_TO_EUR = 0.86
 
 # Liste des items à surveiller
 ITEMS = [
@@ -26,7 +27,7 @@ ITEMS = [
         "name": "# ★ M9 Bayonet | Crimson Web",
         "def_index": 508,   # M9 Bayonet
         "paint_index": 12,  # Crimson Web
-        "max_price": 1500,  # USD
+        "max_price": 1716,  # USD
         "min_float": 0,
         "max_float": 0.15   # Minimal Wear
     },
@@ -34,7 +35,7 @@ ITEMS = [
         "name": "★ Karambit | Crimson Web",
         "def_index": 507,   # Karambit
         "paint_index": 12,  # Crimson Web
-        "max_price": 1500,
+        "max_price": 1716,
         "min_float": 0,
         "max_float": 0.15   # Minimal Wear
     },
@@ -69,7 +70,7 @@ def send_discord_message(message: str):
     if DISCORD_WEBHOOK and DISCORD_USER_ID:
         try:
             mention = f"<@{DISCORD_USER_ID}>"
-            requests.post(DISCORD_WEBHOOK, json={"content": f"{mention} {message}"})
+            requests.post(DISCORD_WEBHOOK, json={"content": f"{mention}\n{message}"})
         except Exception as e:
             print(f"❌ Erreur envoi Discord : {e}")
 
@@ -97,7 +98,8 @@ def check_item(item):
 
         for listing in data.get("data", []):
             listing_id = str(listing["id"])
-            price = listing["price"] / 100  # USD
+            price_usd = listing["price"] / 100  # USD
+            price_eur = price_usd * USD_TO_EUR
 
             previous_price = history[item_key].get(listing_id)
             flt = listing["item"]["float_value"]
@@ -105,27 +107,28 @@ def check_item(item):
 
             # Nouveau listing
             if previous_price is None:
-                if price <= item["max_price"] and flt <= item["max_float"]:
+                if price_usd <= item["max_price"] and flt <= item["max_float"]:
                     msg = (
-                        f"🎯 **Item name:** {item['name']}\n"
-                        f"💰 Prix: ${price:.2f} | Float: {flt}\n"
+                        f"🎯 **{item['name']}** \n"
+                        f"💰 Prix: ${price_usd:.2f} / {price_eur:.2f}€ | Float: {flt}\n"
                         f"🔗 {link}"
                     )
                     send_discord_message(msg)
                     new_items_found += 1
             # Listing déjà vu, mais prix changé
-            elif previous_price != price:
+            elif previous_price != price_usd:
+                previous_price_eur = previous_price * USD_TO_EUR
                 msg = (
                     f"🔄 **Changement de prix détecté !**\n"
                     f"**Item name:** {item['name']}\n"
-                    f"💰 Ancien prix: ${previous_price:.2f} → Nouveau prix: ${price:.2f} | Float: {flt}\n"
+                    f"💰 Ancien prix: ${previous_price:.2f} / {previous_price_eur:.2f}€ → Nouveau prix: ${price_usd:.2f} / {price_eur:.2f}€ | Float: {flt}\n"
                     f"🔗 {link}"
                 )
                 send_discord_message(msg)
                 new_items_found += 1
 
             # Mettre à jour l'historique avec le prix actuel
-            history[item_key][listing_id] = price
+            history[item_key][listing_id] = price_usd
 
         if new_items_found:
             save_history(history)
