@@ -141,6 +141,9 @@ def check_item(item):
                     f"🔄 **Changement de prix détecté !**\n"
                     f"🎯 **{item['name']}** \n"
                     f"💰 Ancien prix: **{previous_price_eur:.2f}€** (**${previous_price:.2f}**) → Nouveau prix: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
+                    f"🏷️ {f"Réduction de **{previous_price_eur - price_eur:.2f}€** ! (-{((previous_price_eur - price_eur) / previous_price_eur) * 100:.2f}%)\n"
+                    if price_usd < previous_price
+                    else f"Augmentation de **{price_eur - previous_price_eur:.2f}€**. (+{((price_eur - previous_price_eur) / previous_price_eur) * 100:.2f}%)\n"}"
                     f"💎 Float: {flt}\n"
                     f"🔗 {link}"
                 )
