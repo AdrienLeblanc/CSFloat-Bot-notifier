@@ -76,6 +76,7 @@ def send_discord_message(message: str):
         try:
             mention = f"<@{DISCORD_USER_ID}>"
             requests.post(DISCORD_WEBHOOK, json={"content": f"{mention}\n{message}"})
+            print(message)
         except Exception as e:
             print(f"❌ Erreur envoi Discord : {e}")
 
