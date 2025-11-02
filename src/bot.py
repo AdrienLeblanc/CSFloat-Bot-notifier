@@ -119,7 +119,7 @@ def check_item(item):
                     msg = (
                         f"🆕 **Nouvelle offre détectée !**\n"
                         f"🎯 **{item['name']}** \n"
-                        f"💰 Prix: $**{price_usd:.2f}** / **{price_eur:.2f}**€\n"
+                        f"💰 Prix: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
                         f"💎 Float: {flt}\n"
                         f"🔗 {link}"
                     )
@@ -131,7 +131,7 @@ def check_item(item):
                 msg = (
                     f"🔄 **Changement de prix détecté !**\n"
                     f"🎯 **{item['name']}** \n"
-                    f"💰 Ancien prix: $**{previous_price:.2f}** / **{previous_price_eur:.2f}**€ → Nouveau prix: $**{price_usd:.2f}** / **{price_eur:.2f}**€\n"
+                    f"💰 Ancien prix: **{previous_price_eur:.2f}€** (**${previous_price:.2f}**) → Nouveau prix: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
                     f"💎 Float: {flt}\n"
                     f"🔗 {link}"
                 )
