@@ -31,7 +31,7 @@ USD_TO_EUR = 0.8668
 # Liste des items à surveiller
 ITEMS = [
     {
-        "name": "# ★ M9 Bayonet | Crimson Web",
+        "name": "★ M9 Bayonet | Crimson Web",
         "def_index": 508,   # M9 Bayonet
         "paint_index": 12,  # Crimson Web
         "max_price": 1716,  # USD
@@ -117,6 +117,7 @@ def check_item(item):
             if previous_price is None:
                 if price_usd <= item["max_price"] and flt <= item["max_float"]:
                     msg = (
+                        f"🆕 **Nouvelle offre détectée !**\n"
                         f"🎯 **{item['name']}** \n"
                         f"💰 Prix: $**{price_usd:.2f}** / **{price_eur:.2f}**€\n"
                         f"💎 Float: {flt}\n"
