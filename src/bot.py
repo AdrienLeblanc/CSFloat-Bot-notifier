@@ -25,8 +25,8 @@ DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 DISCORD_USER_ID = os.getenv("DISCORD_USER_ID")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 60))
 CSFLOAT_TOKEN = os.getenv("CSFLOAT_TOKEN")
+OPEN_EXCHANGE_RATES_TOKEN = os.getenv("OPEN_EXCHANGE_RATES_TOKEN")
 HISTORY_FILE = os.path.join(BASE_DIR, "../history.json")
-USD_TO_EUR = 0.8668
 
 # Liste des items à surveiller
 ITEMS = [
@@ -80,6 +80,15 @@ def send_discord_message(message: str):
         except Exception as e:
             print(f"❌ Erreur envoi Discord : {e}")
 
+def fetch_currency_exchange_rate():
+    global USD_TO_EUR
+    try:
+        url = f"https://openexchangerates.org/api/latest.json?app_id={OPEN_EXCHANGE_RATES_TOKEN}"
+        r = requests.get(url)
+        data = r.json()
+        USD_TO_EUR = data["rates"]["EUR"]
+    except Exception as e:
+        print(f"❌ Erreur récupération taux de change : {e}")
 
 def check_item(item):
     global history
@@ -149,6 +158,7 @@ def check_item(item):
 
 def main():
     ensure_dependencies()
+    fetch_currency_exchange_rate()
     print(os.path.join(BASE_DIR, '../.env.secrets'))
     print("🚀 Lancement du bot...\n")
     while True:
