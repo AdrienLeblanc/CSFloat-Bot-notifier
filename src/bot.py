@@ -16,6 +16,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
+
 class CSFloatBot:
     def __init__(self):
         if getattr(sys, 'frozen', False):
@@ -59,8 +60,12 @@ class CSFloatBot:
 
     def load_history(self):
         if os.path.exists(self.HISTORY_FILE):
-            with open(self.HISTORY_FILE, "r") as f:
-                return json.load(f)
+            try:
+                with open(self.HISTORY_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logging.error(f"Erreur lors du chargement de l'historique : {e}")
+                return {}
         return {}
 
     def save_history(self):
@@ -184,6 +189,7 @@ class CSFloatBot:
                 min_price = None
                 min_float = None
                 for listing_id, info in self.history.get(item_key, {}).items():
+                    # Compute new offers
                     try:
                         ts = datetime.fromisoformat(info["timestamp"])
                     except Exception:
@@ -194,7 +200,10 @@ class CSFloatBot:
                         if min_price is None or price_eur < min_price:
                             min_price = price_eur
                             min_float = info["float"]
-                    for change in info.get("changes", []):
+                    # Count price changes (excluding initial creation)
+                    for idx, change in enumerate(info.get("changes", [])):
+                        if idx == 0:
+                            continue  # Skip initial entry
                         try:
                             cts = datetime.fromisoformat(change["timestamp"])
                         except Exception:
@@ -231,6 +240,7 @@ class CSFloatBot:
             for item in self.ITEMS:
                 self.check_item(item)
             time.sleep(self.CHECK_INTERVAL)
+
 
 if __name__ == "__main__":
     bot = CSFloatBot()
