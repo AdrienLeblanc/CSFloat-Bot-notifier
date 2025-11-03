@@ -2,13 +2,19 @@ import requests
 import time
 import json
 import os
-import subprocess
+import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import sys
 import threading
 
-sys.stdout.reconfigure(encoding='utf-8')
+DEFAULT_USD_TO_EUR = 0.866
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
 
 class CSFloatBot:
     def __init__(self):
@@ -26,7 +32,7 @@ class CSFloatBot:
         self.CSFLOAT_TOKEN = os.getenv("CSFLOAT_TOKEN")
         self.OPEN_EXCHANGE_RATES_TOKEN = os.getenv("OPEN_EXCHANGE_RATES_TOKEN")
         self.HISTORY_FILE = os.path.join(self.BASE_DIR, "../history.json")
-        self.USD_TO_EUR = 0.866
+        self.USD_TO_EUR = DEFAULT_USD_TO_EUR
 
         self.ITEMS = [
             {
@@ -48,23 +54,12 @@ class CSFloatBot:
         ]
 
         self.history = self.load_history()
-        self.ensure_dependencies()
         self.fetch_currency_exchange_rate()
         self.lock = threading.Lock()
 
-    def ensure_dependencies(self):
-        try:
-            import requests
-        except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-        try:
-            import dotenv
-        except ImportError:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "python-dotenv"])
-
     def load_history(self):
         if os.path.exists(self.HISTORY_FILE):
-            with open(self.HISTORY_FILE, "r", encoding="utf-8") as f:
+            with open(self.HISTORY_FILE, "r") as f:
                 return json.load(f)
         return {}
 
@@ -74,8 +69,8 @@ class CSFloatBot:
 
     def fetch_currency_exchange_rate(self):
         if not self.OPEN_EXCHANGE_RATES_TOKEN:
-            print("⚠️ OPEN_EXCHANGE_RATES_TOKEN not set, using fixed rate 0.866")
-            self.USD_TO_EUR = 0.866
+            logging.warning("OPEN_EXCHANGE_RATES_TOKEN not set, using default rate.")
+            self.USD_TO_EUR = DEFAULT_USD_TO_EUR
             return
         try:
             url = f"https://openexchangerates.org/api/latest.json?app_id={self.OPEN_EXCHANGE_RATES_TOKEN}"
@@ -83,18 +78,18 @@ class CSFloatBot:
             data = r.json()
             self.USD_TO_EUR = data["rates"]["EUR"]
         except Exception as e:
-            print(f"❌ Error fetching exchange rate: {e}")
+            logging.error(f"Error fetching exchange rate: {e}")
 
     def send_discord_message(self, message: str):
         if self.DISCORD_WEBHOOK:
             try:
                 mention = f"<@{self.DISCORD_USER_ID}>\n" if self.DISCORD_USER_ID else ""
                 requests.post(self.DISCORD_WEBHOOK, json={"content": f"{mention}{message}"})
-                print(message)
+                logging.info(message)
             except Exception as e:
-                print(f"❌ Error sending to Discord: {e}")
+                logging.error(f"Error sending to Discord: {e}")
         else:
-            print("⚠️ DISCORD_WEBHOOK not set, message not sent.")
+            logging.warning("DISCORD_WEBHOOK not set, message not sent.")
 
     def fetch_csfloat_data(self, item):
         url = (
@@ -124,7 +119,6 @@ class CSFloatBot:
             if item_key not in self.history:
                 self.history[item_key] = {}
             if listing_id not in self.history[item_key]:
-                # New offer
                 self.history[item_key][listing_id] = {
                     "price": price_usd,
                     "float": flt,
@@ -147,16 +141,21 @@ class CSFloatBot:
                 prev = self.history[item_key][listing_id]
                 if prev["price"] != price_usd:
                     prev_price_eur = prev["price"] * self.USD_TO_EUR
+                    delta = price_eur - prev_price_eur
+                    percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
+                    if price_usd < prev["price"]:
+                        change_msg = f"Price drop of **{abs(delta):.2f}€**! (-{percent:.2f}%)\n"
+                    else:
+                        change_msg = f"Price increase of **{abs(delta):.2f}€**. (+{percent:.2f}%)\n"
                     msg = (
                         f"🔄 **Price change detected!**\n"
                         f"🎯 **{item['name']}** \n"
                         f"💰 Old price: **{prev_price_eur:.2f}€** (**${prev['price']:.2f}**) → New price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
-                        f"🏷️ {f'Decrease of **{prev_price_eur - price_eur:.2f}€** ! (-{((prev_price_eur - price_eur) / prev_price_eur) * 100:.2f}%)\n' if price_usd < prev['price'] else f'Increase of **{price_eur - prev_price_eur:.2f}€**. (+{((price_eur - prev_price_eur) / prev_price_eur) * 100:.2f}%)\n'}"
+                        f"🏷️ {change_msg}"
                         f"💎 Float: {flt}\n"
                         f"🔗 {link}"
                     )
                     self.send_discord_message(msg)
-                    # Add the change to history
                     prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
                     prev["price"] = price_usd
                     prev["float"] = flt
@@ -170,7 +169,7 @@ class CSFloatBot:
             for listing in data.get("data", []):
                 self.process_listing(item, item_key, listing)
         except Exception as e:
-            print(f"❌ Error: {e}")
+            logging.error(f"Error: {e}")
 
     def stats_message(self, period_hours=24):
         now = datetime.now()
@@ -178,8 +177,6 @@ class CSFloatBot:
         new_offers = 0
         price_changes = 0
         min_prices = {}
-        min_floats = {}
-        price_deltas = []
 
         with self.lock:
             for item in self.ITEMS:
@@ -187,7 +184,6 @@ class CSFloatBot:
                 min_price = None
                 min_float = None
                 for listing_id, info in self.history.get(item_key, {}).items():
-                    # New offer in the period
                     try:
                         ts = datetime.fromisoformat(info["timestamp"])
                     except Exception:
@@ -198,7 +194,6 @@ class CSFloatBot:
                         if min_price is None or price_eur < min_price:
                             min_price = price_eur
                             min_float = info["float"]
-                    # Price changes in the period
                     for change in info.get("changes", []):
                         try:
                             cts = datetime.fromisoformat(change["timestamp"])
@@ -206,18 +201,17 @@ class CSFloatBot:
                             continue
                         if cts >= since:
                             price_changes += 1
-                            price_deltas.append(change["price"] * self.USD_TO_EUR)
                 if min_price is not None:
                     min_prices[item_key] = (min_price, min_float)
 
-        msg = f"📊 **Statistics for the last {period_hours}h**\n"
+        msg = f"📊 **Stats for the last {period_hours}h**\n"
         msg += f"- New offers detected: {new_offers}\n"
         msg += f"- Price changes: {price_changes}\n"
         for item in self.ITEMS:
             item_key = item["name"]
             if item_key in min_prices:
                 price, flt = min_prices[item_key]
-                msg += f"- Lowest offer for {item_key}: {price:.2f} € (float {flt})\n"
+                msg += f"- Lowest offer for {item_key}: {price:.2f}€ (float {flt})\n"
         return msg
 
     def stats_listener(self):
@@ -230,11 +224,10 @@ class CSFloatBot:
             time.sleep(0.1)
 
     def run(self):
-        print(os.path.join(self.BASE_DIR, '../.env.secrets'))
-        print("🚀 Bot started...\n")
+        logging.info("Bot started...\n")
         threading.Thread(target=self.stats_listener, daemon=True).start()
         while True:
-            print("⏰ Checking at:", datetime.now().strftime("%H:%M"))
+            logging.info("⏰ Checking at: %s", datetime.now().strftime("%H:%M"))
             for item in self.ITEMS:
                 self.check_item(item)
             time.sleep(self.CHECK_INTERVAL)
