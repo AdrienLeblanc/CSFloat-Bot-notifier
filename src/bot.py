@@ -94,7 +94,6 @@ class CSFloatBot:
                 else:
                     payload["content"] += message
                 requests.post(self.DISCORD_WEBHOOK, json=payload)
-                logging.info(message)
             except Exception as e:
                 logging.error(f"Error sending to Discord: {e}")
         else:
@@ -161,6 +160,7 @@ class CSFloatBot:
                 "url": link,
                 "footer": {"text": "CSFloat Bot"},
             }
+            logging.info("New offer: %s at %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             self.save_history()
 
@@ -206,6 +206,7 @@ class CSFloatBot:
                 "url": link,
                 "footer": {"text": "CSFloat Bot"},
             }
+            logging.info("Price change: %s to %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
             prev["price"] = price_usd
