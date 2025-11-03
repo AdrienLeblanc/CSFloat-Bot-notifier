@@ -124,48 +124,54 @@ class CSFloatBot:
             if item_key not in self.history:
                 self.history[item_key] = {}
             if listing_id not in self.history[item_key]:
-                self.history[item_key][listing_id] = {
-                    "price": price_usd,
-                    "float": flt,
-                    "timestamp": now,
-                    "changes": [
-                        {"price": price_usd, "float": flt, "timestamp": now}
-                    ]
-                }
-                if price_usd <= item["max_price"] and flt <= item["max_float"]:
-                    msg = (
-                        f"🆕 **New offer detected!**\n"
-                        f"🎯 **{item['name']}** \n"
-                        f"💰 Price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
-                        f"💎 Float: {flt}\n"
-                        f"🔗 {link}"
-                    )
-                    self.send_discord_message(msg)
-                    self.save_history()
+                self.handle_new_listing(item, item_key, listing_id, price_usd, flt, now, price_eur, link)
             else:
-                prev = self.history[item_key][listing_id]
-                if prev["price"] != price_usd:
-                    prev_price_eur = prev["price"] * self.USD_TO_EUR
-                    delta = price_eur - prev_price_eur
-                    percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
-                    if price_usd < prev["price"]:
-                        change_msg = f"Price drop of **{abs(delta):.2f}€**! (-{percent:.2f}%)\n"
-                    else:
-                        change_msg = f"Price increase of **{abs(delta):.2f}€**. (+{percent:.2f}%)\n"
-                    msg = (
-                        f"🔄 **Price change detected!**\n"
-                        f"🎯 **{item['name']}** \n"
-                        f"💰 Old price: **{prev_price_eur:.2f}€** (**${prev['price']:.2f}**) → New price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
-                        f"🏷️ {change_msg}"
-                        f"💎 Float: {flt}\n"
-                        f"🔗 {link}"
-                    )
-                    self.send_discord_message(msg)
-                    prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
-                    prev["price"] = price_usd
-                    prev["float"] = flt
-                    prev["timestamp"] = now
-                    self.save_history()
+                self.handle_existing_listing(item, item_key, listing_id, price_usd, flt, now, price_eur, link)
+
+    def handle_new_listing(self, item, item_key, listing_id, price_usd, flt, now, price_eur, link):
+        self.history[item_key][listing_id] = {
+            "price": price_usd,
+            "float": flt,
+            "timestamp": now,
+            "changes": [
+                {"price": price_usd, "float": flt, "timestamp": now}
+            ]
+        }
+        if price_usd <= item["max_price"] and flt <= item["max_float"]:
+            msg = (
+                f"🆕 **New offer detected!**\n"
+                f"🎯 **{item['name']}** \n"
+                f"💰 Price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
+                f"💎 Float: {flt}\n"
+                f"🔗 {link}"
+            )
+            self.send_discord_message(msg)
+            self.save_history()
+
+    def handle_existing_listing(self, item, item_key, listing_id, price_usd, flt, now, price_eur, link):
+        prev = self.history[item_key][listing_id]
+        if prev["price"] != price_usd:
+            prev_price_eur = prev["price"] * self.USD_TO_EUR
+            delta = price_eur - prev_price_eur
+            percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
+            if price_usd < prev["price"]:
+                change_msg = f"Price drop of **{abs(delta):.2f}€**! (-{percent:.2f}%)\n"
+            else:
+                change_msg = f"Price increase of **{abs(delta):.2f}€**. (+{percent:.2f}%)\n"
+            msg = (
+                f"🔄 **Price change detected!**\n"
+                f"🎯 **{item['name']}** \n"
+                f"💰 Old price: **{prev_price_eur:.2f}€** (**${prev['price']:.2f}**) → New price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
+                f"🏷️ {change_msg}"
+                f"💎 Float: {flt}\n"
+                f"🔗 {link}"
+            )
+            self.send_discord_message(msg)
+            prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
+            prev["price"] = price_usd
+            prev["float"] = flt
+            prev["timestamp"] = now
+            self.save_history()
 
     def check_item(self, item):
         try:
