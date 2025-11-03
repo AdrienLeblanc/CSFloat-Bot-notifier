@@ -1,0 +1,26 @@
+name: Python Bot
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run bot
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          DISCORD_USER_ID: ${{ secrets.DISCORD_USER_ID }}
+          CHECK_INTERVAL: 60
+          CSFLOAT_TOKEN: ${{ secrets.CSFLOAT_TOKEN }}
+          OPEN_EXCHANGE_RATES_TOKEN: ${{ secrets.OPEN_EXCHANGE_RATES_TOKEN }}
+        run: python src/bot.py
