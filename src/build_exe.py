@@ -6,7 +6,7 @@ def install_pyinstaller():
     try:
         import PyInstaller  # noqa: F401
     except ImportError:
-        print("PyInstaller non trouvé, installation...")
+        print("PyInstaller not found, installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
 def build_exe(script_name):
@@ -16,14 +16,14 @@ def build_exe(script_name):
         "--console",
         script_name
     ]
-    print("Exécution de :", " ".join(cmd))
+    print("Running:", " ".join(cmd))
     subprocess.check_call(cmd)
 
 if __name__ == "__main__":
     script = "src/bot.py"
     if not os.path.exists(script):
-        print(f"Le fichier {script} est introuvable.")
+        print(f"The file {script} was not found.")
         sys.exit(1)
     install_pyinstaller()
     build_exe(script)
-    print("✅ Compilation terminée. L’exécutable est dans le dossier 'dist'.")
+    print("✅ Build complete. The executable is in the 'dist' folder.")
