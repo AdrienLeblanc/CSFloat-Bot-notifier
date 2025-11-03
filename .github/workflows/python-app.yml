@@ -2,7 +2,8 @@ name: Python Bot
 
 on:
   push:
-    branches: [ master ]
+    branches-ignore:
+      - master
   workflow_dispatch:
 
 jobs:
