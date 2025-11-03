@@ -12,6 +12,12 @@ Before running the script, you need to configure the following variables in .env
 - `CSFLOAT_TOKEN`: Your CSFloat API token.
 - `OPEN_EXCHANGE_RATES_TOKEN` : Your Open Exchange Rates API token.
 
+### Install dependencies
+Make sure you have Python installed. Then, install the required dependencies using pip:
+```bash
+pip install -r requirements.txt
+```
+
 ## Run
 To run the script, use the following command:
 ```bash
