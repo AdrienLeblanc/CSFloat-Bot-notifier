@@ -85,11 +85,15 @@ class CSFloatBot:
         except Exception as e:
             logging.error(f"Error fetching exchange rate: {e}")
 
-    def send_discord_message(self, message: str):
+    def send_discord_message(self, message: str, embed: dict = None):
         if self.DISCORD_WEBHOOK:
             try:
-                mention = f"<@{self.DISCORD_USER_ID}>\n" if self.DISCORD_USER_ID else ""
-                requests.post(self.DISCORD_WEBHOOK, json={"content": f"{mention}{message}"})
+                payload = {"content": f"<@{self.DISCORD_USER_ID}>\n" if self.DISCORD_USER_ID else ""}
+                if embed:
+                    payload["embeds"] = [embed]
+                else:
+                    payload["content"] += message
+                requests.post(self.DISCORD_WEBHOOK, json=payload)
                 logging.info(message)
             except Exception as e:
                 logging.error(f"Error sending to Discord: {e}")
@@ -138,14 +142,26 @@ class CSFloatBot:
             ]
         }
         if price_usd <= item["max_price"] and flt <= item["max_float"]:
-            msg = (
-                f"🆕 **New offer detected!**\n"
-                f"🎯 **{item['name']}** \n"
-                f"💰 Price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
-                f"💎 Float: {flt}\n"
-                f"🔗 {link}"
-            )
-            self.send_discord_message(msg)
+            embed = {
+                "title": "🆕 New offer detected!",
+                "description": f"**{item['name']}**",
+                "color": 0x2ecc71,  # Green
+                "fields": [
+                    {
+                        "name": "💰 Price",
+                        "value": f"**{price_eur:.2f}€** (**${price_usd:.2f}**)",
+                        "inline": True
+                    },
+                    {
+                        "name": "💎 Float",
+                        "value": f"{flt}",
+                        "inline": True
+                    },
+                ],
+                "url": link,
+                "footer": {"text": "CSFloat Bot"},
+            }
+            self.send_discord_message("", embed)
             self.save_history()
 
     def handle_existing_listing(self, item, item_key, listing_id, price_usd, flt, now, price_eur, link):
@@ -155,18 +171,42 @@ class CSFloatBot:
             delta = price_eur - prev_price_eur
             percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
             if price_usd < prev["price"]:
-                change_msg = f"Price drop of **{abs(delta):.2f}€**! (-{percent:.2f}%)\n"
+                change_msg = f"Decrease of **{abs(delta):.2f}€** (-{percent:.2f}%)"
+                color = 0x27ae60  # Green
             else:
-                change_msg = f"Price increase of **{abs(delta):.2f}€**. (+{percent:.2f}%)\n"
-            msg = (
-                f"🔄 **Price change detected!**\n"
-                f"🎯 **{item['name']}** \n"
-                f"💰 Old price: **{prev_price_eur:.2f}€** (**${prev['price']:.2f}**) → New price: **{price_eur:.2f}€** (**${price_usd:.2f}**)\n"
-                f"🏷️ {change_msg}"
-                f"💎 Float: {flt}\n"
-                f"🔗 {link}"
-            )
-            self.send_discord_message(msg)
+                change_msg = f"Increase of **{abs(delta):.2f}€** (+{percent:.2f}%)"
+                color = 0xe67e22  # Orange
+
+            embed = {
+                "title": "🔄 Price change detected!",
+                "description": f"**{item['name']}**",
+                "color": color,
+                "fields": [
+                    {
+                        "name": "Previous price",
+                        "value": f"**{prev_price_eur:.2f}€** (**${prev['price']:.2f}**)",
+                        "inline": True
+                    },
+                    {
+                        "name": "New price",
+                        "value": f"**{price_eur:.2f}€** (**${price_usd:.2f}**)",
+                        "inline": True
+                    },
+                    {
+                        "name": "Change",
+                        "value": change_msg,
+                        "inline": False
+                    },
+                    {
+                        "name": "💎 Float",
+                        "value": f"{flt}",
+                        "inline": True
+                    },
+                ],
+                "url": link,
+                "footer": {"text": "CSFloat Bot"},
+            }
+            self.send_discord_message("", embed)
             prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
             prev["price"] = price_usd
             prev["float"] = flt
