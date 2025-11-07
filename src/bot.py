@@ -102,7 +102,7 @@ class CSFloatBot:
     def fetch_csfloat_data(self, item):
         url = (
             "https://csfloat.com/api/v1/listings?"
-            f"sort_by=lowest_price&min_float={item['min_float']}&max_float={item['max_float']}&def_index={item['def_index']}&paint_index={item['paint_index']}"
+            f"sort_by=lowest_price&min_float={item['min_float']}&max_float={item['max_float']}&def_index={item['def_index']}&paint_index={item['paint_index']}&type=buy_now"
         )
         headers = {}
         if self.CSFLOAT_TOKEN:
