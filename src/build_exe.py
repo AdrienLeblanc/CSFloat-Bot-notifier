@@ -20,7 +20,7 @@ def build_exe(script_name):
     subprocess.check_call(cmd)
 
 if __name__ == "__main__":
-    script = "src/bot.py"
+    script = "src/main.py"
     if not os.path.exists(script):
         print(f"The file {script} was not found.")
         sys.exit(1)

@@ -21,7 +21,7 @@ pip install -r requirements.txt
 ## Run
 To run the script, use the following command:
 ```bash
-python bot.py
+python main.py
 ```
 
 ## Build

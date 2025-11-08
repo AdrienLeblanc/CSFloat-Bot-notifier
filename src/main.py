@@ -140,7 +140,8 @@ class CSFloatBot:
             ]
         }
         if price_usd <= item["max_price"] and flt <= item["max_float"]:
-            embed = EmbedMapper.new_offer_embed(item, listing, self.USD_TO_EUR)
+            embed = EmbedMapper.map_to_new_offer(item, listing, self.USD_TO_EUR)
+            print(embed)
             logging.info("New offer: %s at %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             self.save_history()
@@ -153,7 +154,8 @@ class CSFloatBot:
         prev = self.history[item_key][listing_id]
         if prev["price"] != price_usd:
             now = datetime.now().isoformat()
-            embed = EmbedMapper.price_change_embed(item, prev, listing, self.USD_TO_EUR)
+            embed = EmbedMapper.map_to_edited_offer(item, prev, listing, self.USD_TO_EUR)
+            print(embed)
             logging.info("Price change: %s to %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})

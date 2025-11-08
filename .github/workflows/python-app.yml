@@ -24,4 +24,4 @@ jobs:
           CHECK_INTERVAL: 60
           CSFLOAT_TOKEN: ${{ secrets.CSFLOAT_TOKEN }}
           OPEN_EXCHANGE_RATES_TOKEN: ${{ secrets.OPEN_EXCHANGE_RATES_TOKEN }}
-        run: python src/bot.py
+        run: python src/main.py
