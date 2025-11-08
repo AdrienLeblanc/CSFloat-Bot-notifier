@@ -23,12 +23,15 @@ class EmbedMapper:
                     "value": f"{flt}",
                     "inline": True
                 },
+            ].append(
                 {
                     "name": "📝 Note",
                     "value": f"{note}",
                     "inline": True
-                },
-            ],
+                }
+                if note is not None
+                else None
+            ),
             "url": link,
             "footer": {"text": "CSFloat Bot"},
         }
@@ -81,7 +84,15 @@ class EmbedMapper:
                     "value": f"{note}",
                     "inline": True
                 },
-            ],
+            ].append(
+                {
+                    "name": "📝 Note",
+                    "value": f"{note}",
+                    "inline": True
+                }
+                if note is not None
+                else None
+            ),
             "url": link,
             "footer": {"text": "CSFloat Bot"},
         }
