@@ -5,6 +5,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from mapper import EmbedMapper
 import sys
 import threading
 
@@ -116,22 +117,20 @@ class CSFloatBot:
         return data
 
     def process_listing(self, item, item_key: str, listing):
+        with self.lock:
+            if item_key not in self.history:
+                self.history[item_key] = {}
+            if str(listing["id"]) not in self.history[item_key]:
+                self.handle_new_listing(item, item_key, listing)
+            else:
+                self.handle_existing_listing(item, item_key, listing)
+
+    def handle_new_listing(self, item, item_key, listing):
+        now = datetime.now().isoformat()
         listing_id = str(listing["id"])
         price_usd = listing["price"] / 100
         price_eur = price_usd * self.USD_TO_EUR
         flt = listing["item"]["float_value"]
-        now = datetime.now().isoformat()
-        link = f"https://csfloat.com/item/{listing_id}"
-
-        with self.lock:
-            if item_key not in self.history:
-                self.history[item_key] = {}
-            if listing_id not in self.history[item_key]:
-                self.handle_new_listing(item, item_key, listing_id, price_usd, flt, now, price_eur, link)
-            else:
-                self.handle_existing_listing(item, item_key, listing_id, price_usd, flt, now, price_eur, link)
-
-    def handle_new_listing(self, item, item_key, listing_id, price_usd, flt, now, price_eur, link):
         self.history[item_key][listing_id] = {
             "price": price_usd,
             "float": flt,
@@ -141,71 +140,20 @@ class CSFloatBot:
             ]
         }
         if price_usd <= item["max_price"] and flt <= item["max_float"]:
-            embed = {
-                "title": "🆕 New offer detected!",
-                "description": f"**{item['name']}**",
-                "color": 0x2ecc71,  # Green
-                "fields": [
-                    {
-                        "name": "💰 Price",
-                        "value": f"**{price_eur:.2f}€** (**${price_usd:.2f}**)",
-                        "inline": True
-                    },
-                    {
-                        "name": "💎 Float",
-                        "value": f"{flt}",
-                        "inline": True
-                    },
-                ],
-                "url": link,
-                "footer": {"text": "CSFloat Bot"},
-            }
+            embed = EmbedMapper.new_offer_embed(item, listing, self.USD_TO_EUR)
             logging.info("New offer: %s at %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             self.save_history()
 
-    def handle_existing_listing(self, item, item_key, listing_id, price_usd, flt, now, price_eur, link):
+    def handle_existing_listing(self, item, item_key, listing):
+        listing_id = str(listing["id"])
+        price_usd = listing["price"] / 100
+        price_eur = price_usd * self.USD_TO_EUR
+        flt = listing["item"]["float_value"]
         prev = self.history[item_key][listing_id]
         if prev["price"] != price_usd:
-            prev_price_eur = prev["price"] * self.USD_TO_EUR
-            delta = price_eur - prev_price_eur
-            percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
-            if price_usd < prev["price"]:
-                change_msg = f"Decrease of **{abs(delta):.2f}€** (-{percent:.2f}%)"
-                color = 0x27ae60  # Green
-            else:
-                change_msg = f"Increase of **{abs(delta):.2f}€** (+{percent:.2f}%)"
-                color = 0xe67e22  # Orange
-
-            embed = {
-                "title": "🔄 Price change detected!",
-                "description": f"**{item['name']}**",
-                "color": color,
-                "fields": [
-                    {
-                        "name": "Previous price",
-                        "value": f"**{prev_price_eur:.2f}€** (**${prev['price']:.2f}**)",
-                        "inline": True
-                    },
-                    {
-                        "name": "New price",
-                        "value": f"**{price_eur:.2f}€** (**${price_usd:.2f}**)",
-                        "inline": True
-                    },
-                    {
-                        "name": "Change",
-                        "value": change_msg,
-                        "inline": False
-                    },
-                    {
-                        "name": "💎 Float",
-                        "value": f"{flt}",
-                        "inline": True
-                    },
-                ],
-                "url": link,
-                "footer": {"text": "CSFloat Bot"},
-            }
+            now = datetime.now().isoformat()
+            embed = EmbedMapper.price_change_embed(item, prev, listing, self.USD_TO_EUR)
             logging.info("Price change: %s to %.2f€ (float %.6f)", item['name'], price_eur, flt)
             self.send_discord_message("", embed)
             prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
