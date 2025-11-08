@@ -1,3 +1,5 @@
+from tiers import Tiers
+
 class EmbedMapper:
     @staticmethod
     def map_to_new_offer(item, listing, usd_to_eur):
@@ -6,6 +8,7 @@ class EmbedMapper:
         price_eur = price_usd * usd_to_eur
         flt = listing["item"]["float_value"]
         note = listing.get("description")
+        tier = Tiers.determine(item['def_index'], item['paint_index'])
         link = f"https://csfloat.com/item/{listing_id}"
 
         fields = [
@@ -20,6 +23,12 @@ class EmbedMapper:
                 "inline": True
             },
         ]
+        if tier is not None:
+            fields.append({
+                "name": "🏅 Tier",
+                "value": f"{tier}",
+                "inline": True
+            })
         if note is not None:
             fields.append({
                 "name": "📝 Note",
@@ -44,6 +53,7 @@ class EmbedMapper:
         delta = price_eur - prev_price_eur
         percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
         flt = listing["item"]["float_value"]
+        tier = Tiers.determine(item['def_index'], item['paint_index'])
         note = listing.get("description")
         link = f"https://csfloat.com/item/{listing_id}"
 
@@ -75,6 +85,12 @@ class EmbedMapper:
                 "inline": True
             },
         ]
+        if tier is not None:
+            fields.append({
+                "name": "🏅 Tier",
+                "value": f"{tier}",
+                "inline": True
+            })
         if note is not None:
             fields.append({
                 "name": "📝 Note",
