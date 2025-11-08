@@ -33,7 +33,7 @@ class EmbedMapper:
             fields.append({
                 "name": "📝 Note",
                 "value": f"{note}",
-                "inline": True
+                "inline": False
             })
         return {
             "title": "🆕 New offer detected!",
@@ -95,7 +95,7 @@ class EmbedMapper:
             fields.append({
                 "name": "📝 Note",
                 "value": f"{note}",
-                "inline": True
+                "inline": False
             })
         return {
             "title": "🔄 Price change detected!",

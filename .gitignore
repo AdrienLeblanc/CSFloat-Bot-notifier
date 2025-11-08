@@ -3,6 +3,7 @@ history.json
 /build
 /dist
 *.spec
+*.pyc
 
 # IntelliJ IDEA
 *.iml
