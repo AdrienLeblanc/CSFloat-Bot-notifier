@@ -1,14 +1,15 @@
 from tiers import Tiers
 
+
 class EmbedMapper:
     @staticmethod
-    def map_to_new_offer(item, listing, usd_to_eur):
-        listing_id = str(listing["id"])
-        price_usd = listing["price"] / 100
+    def map_to_new_offer(listing, usd_to_eur):
+        listing_id = str(listing['id'])
+        price_usd = listing['price'] / 100
         price_eur = price_usd * usd_to_eur
-        flt = listing["item"]["float_value"]
+        flt = listing['item']['float_value']
         note = listing.get("description")
-        tier = Tiers.determine(item['def_index'], item['paint_index'])
+        tier = Tiers.determine(listing['item']['def_index'], listing['item']['paint_seed'])
         link = f"https://csfloat.com/item/{listing_id}"
 
         fields = [
@@ -20,7 +21,7 @@ class EmbedMapper:
             {
                 "name": "💎 Float",
                 "value": f"{flt}",
-                "inline": True
+                "inline": False
             },
         ]
         if tier is not None:
@@ -37,27 +38,26 @@ class EmbedMapper:
             })
         return {
             "title": "🆕 New offer detected!",
-            "description": f"**{item['name']}**",
+            "description": f"**{listing['item']['market_hash_name']}**",
             "color": 0x2ecc71,
             "fields": fields,
-            "url": link,
-            "footer": {"text": "CSFloat Bot"},
+            "url": link
         }
 
     @staticmethod
-    def map_to_edited_offer(item, prev, listing, usd_to_eur):
-        prev_price_eur = prev["price"] * usd_to_eur
-        listing_id = str(listing["id"])
-        price_usd = listing["price"] / 100
+    def map_to_edited_offer(prev, listing, usd_to_eur):
+        prev_price_eur = prev['price'] * usd_to_eur
+        listing_id = str(listing['id'])
+        price_usd = listing['price'] / 100
         price_eur = price_usd * usd_to_eur
         delta = price_eur - prev_price_eur
         percent = (abs(delta) / prev_price_eur) * 100 if prev_price_eur else 0
-        flt = listing["item"]["float_value"]
-        tier = Tiers.determine(item['def_index'], item['paint_index'])
+        flt = listing['item']['float_value']
+        tier = Tiers.determine(listing['item']['def_index'], listing['item']['paint_seed'])
         note = listing.get("description")
         link = f"https://csfloat.com/item/{listing_id}"
 
-        if price_usd < prev["price"]:
+        if price_usd < prev['price']:
             change_msg = f"Decrease of **{abs(delta):.2f}€** (-{percent:.2f}%)"
             color = 0x27ae60  # Green
         else:
@@ -99,9 +99,8 @@ class EmbedMapper:
             })
         return {
             "title": "🔄 Price change detected!",
-            "description": f"**{item['name']}**",
+            "description": f"**{listing['item']['market_hash_name']}**",
             "color": color,
             "fields": fields,
-            "url": link,
-            "footer": {"text": "CSFloat Bot"},
+            "url": link
         }

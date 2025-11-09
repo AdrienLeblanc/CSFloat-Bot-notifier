@@ -82,7 +82,7 @@ class CSFloatBot:
             url = f"https://openexchangerates.org/api/latest.json?app_id={self.OPEN_EXCHANGE_RATES_TOKEN}"
             r = requests.get(url)
             data = r.json()
-            self.USD_TO_EUR = data["rates"]["EUR"]
+            self.USD_TO_EUR = data['rates']['EUR']
         except Exception as e:
             logging.error(f"Error fetching exchange rate: {e}")
 
@@ -91,9 +91,9 @@ class CSFloatBot:
             try:
                 payload = {"content": f"<@{self.DISCORD_USER_ID}>\n" if self.DISCORD_USER_ID else ""}
                 if embed:
-                    payload["embeds"] = [embed]
+                    payload['embeds'] = [embed]
                 else:
-                    payload["content"] += message
+                    payload['content'] += message
                 requests.post(self.DISCORD_WEBHOOK, json=payload)
             except Exception as e:
                 logging.error(f"Error sending to Discord: {e}")
@@ -107,7 +107,7 @@ class CSFloatBot:
         )
         headers = {}
         if self.CSFLOAT_TOKEN:
-            headers["Authorization"] = self.CSFLOAT_TOKEN
+            headers['Authorization'] = self.CSFLOAT_TOKEN
         else:
             raise Exception("CSFLOAT_TOKEN not set")
         r = requests.get(url, headers=headers)
@@ -116,21 +116,22 @@ class CSFloatBot:
             raise Exception(data.get("message"))
         return data
 
-    def process_listing(self, item, item_key: str, listing):
+    def process_listing(self, listing):
+        item_key = listing['item']['market_hash_name']
         with self.lock:
             if item_key not in self.history:
                 self.history[item_key] = {}
-            if str(listing["id"]) not in self.history[item_key]:
-                self.handle_new_listing(item, item_key, listing)
+            if str(listing['id']) not in self.history[item_key]:
+                self.handle_new_listing(item_key, listing)
             else:
-                self.handle_existing_listing(item, item_key, listing)
+                self.handle_existing_listing(item_key, listing)
 
-    def handle_new_listing(self, item, item_key, listing):
+    def handle_new_listing(self, item_key, listing):
         now = datetime.now().isoformat()
-        listing_id = str(listing["id"])
-        price_usd = listing["price"] / 100
+        listing_id = str(listing['id'])
+        price_usd = listing['price'] / 100
         price_eur = price_usd * self.USD_TO_EUR
-        flt = listing["item"]["float_value"]
+        flt = listing['item']['float_value']
         self.history[item_key][listing_id] = {
             "price": price_usd,
             "float": flt,
@@ -139,35 +140,33 @@ class CSFloatBot:
                 {"price": price_usd, "float": flt, "timestamp": now}
             ]
         }
-        if price_usd <= item["max_price"] and flt <= item["max_float"]:
-            embed = EmbedMapper.map_to_new_offer(item, listing, self.USD_TO_EUR)
-            logging.info("New offer: %s at %.2f€ (float %.6f)", item['name'], price_eur, flt)
-            self.send_discord_message("", embed)
-            self.save_history()
+        embed = EmbedMapper.map_to_new_offer(listing, self.USD_TO_EUR)
+        logging.info("New offer: %s at %.2f€ (float %.6f)", listing['item']['market_hash_name'], price_eur, flt)
+        self.send_discord_message("", embed)
+        self.save_history()
 
-    def handle_existing_listing(self, item, item_key, listing):
-        listing_id = str(listing["id"])
-        price_usd = listing["price"] / 100
+    def handle_existing_listing(self, item_key, listing):
+        listing_id = str(listing['id'])
+        price_usd = listing['price'] / 100
         price_eur = price_usd * self.USD_TO_EUR
-        flt = listing["item"]["float_value"]
+        flt = listing['item']['float_value']
         prev = self.history[item_key][listing_id]
-        if prev["price"] != price_usd:
+        if prev['price'] != price_usd:
             now = datetime.now().isoformat()
-            embed = EmbedMapper.map_to_edited_offer(item, prev, listing, self.USD_TO_EUR)
-            logging.info("Price change: %s to %.2f€ (float %.6f)", item['name'], price_eur, flt)
+            embed = EmbedMapper.map_to_edited_offer(prev, listing, self.USD_TO_EUR)
+            logging.info("Price change: %s to %.2f€ (float %.6f)", listing['item']['market_hash_name'], price_eur, flt)
             self.send_discord_message("", embed)
-            prev["changes"].append({"price": price_usd, "float": flt, "timestamp": now})
-            prev["price"] = price_usd
-            prev["float"] = flt
-            prev["timestamp"] = now
+            prev['changes'].append({"price": price_usd, "float": flt, "timestamp": now})
+            prev['price'] = price_usd
+            prev['float'] = flt
+            prev['timestamp'] = now
             self.save_history()
 
     def check_item(self, item):
         try:
             data = self.fetch_csfloat_data(item)
-            item_key = f"{item['name']}"
             for listing in data.get("data", []):
-                self.process_listing(item, item_key, listing)
+                self.process_listing(listing)
         except Exception as e:
             logging.error(f"Error: {e}")
 
@@ -180,27 +179,27 @@ class CSFloatBot:
 
         with self.lock:
             for item in self.ITEMS:
-                item_key = item["name"]
+                item_key = item['name']
                 min_price = None
                 min_float = None
                 for listing_id, info in self.history.get(item_key, {}).items():
                     # Compute new offers
                     try:
-                        ts = datetime.fromisoformat(info["timestamp"])
+                        ts = datetime.fromisoformat(info['timestamp'])
                     except Exception:
                         continue
                     if ts >= since:
                         new_offers += 1
-                        price_eur = info["price"] * self.USD_TO_EUR
+                        price_eur = info['price'] * self.USD_TO_EUR
                         if min_price is None or price_eur < min_price:
                             min_price = price_eur
-                            min_float = info["float"]
+                            min_float = info['float']
                     # Count price changes (excluding initial creation)
                     for idx, change in enumerate(info.get("changes", [])):
                         if idx == 0:
                             continue  # Skip initial entry
                         try:
-                            cts = datetime.fromisoformat(change["timestamp"])
+                            cts = datetime.fromisoformat(change['timestamp'])
                         except Exception:
                             continue
                         if cts >= since:
@@ -212,7 +211,7 @@ class CSFloatBot:
         msg += f"- New offers detected: {new_offers}\n"
         msg += f"- Price changes: {price_changes}\n"
         for item in self.ITEMS:
-            item_key = item["name"]
+            item_key = item['name']
             if item_key in min_prices:
                 price, flt = min_prices[item_key]
                 msg += f"- Lowest offer for {item_key}: {price:.2f}€ (float {flt})\n"
